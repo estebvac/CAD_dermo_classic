@@ -87,7 +87,7 @@ def extract_ROI(roi_contour, img,padding = 0.05):
     y_b = max(y_b - padd_y, 0)
 
     # Adjust the boundaries so we get a surrounding region
-    img_max_y, img_max_x = img.shape
+    (img_max_y, img_max_x, img_chan) = img.shape
     x_m = min(x_b + w_b + 2 * padd_x, img_max_x)
     y_m = min(y_b + h_b + 2 * padd_y, img_max_y)
 

@@ -1,13 +1,13 @@
 from os import listdir, chdir
 from os.path import isfile, join
 import pandas as pd
-from candidates_detection.find_candidates import find_candidates
+from candidates_detection.find_candidates import segment_image
 from false_positive_reduction.false_positive_reduction import border_false_positive_reduction
 from evaluation.dice_similarity import dice_similarity, extract_ROI
 from candidates_detection.utils import bring_to_256_levels
 from feature_extraction.features_extraction import *
 from feature_extraction.contour_features import *
-
+import os
 
 def read_images(general_path):
     '''
@@ -19,26 +19,19 @@ def read_images(general_path):
 
     Returns
     -------
-    raw_im_Path     String path pointing to the images of the dataset
-    gt_im_path      String path pointing to the ground truth of the dataset
-    raw_images      List of names of the original images
-    gt_images       List of names of the ground truth images
+    images_dataframe    Datafame containing the String path of the image and the class
 
     '''
 
     #  Read the dataset
-    raw_im_Path = general_path + "images"
-    gt_im_path = general_path + "groundtruth"
-    raw_images =\
-        [f for f in listdir(raw_im_Path) if f.endswith(".tif") and isfile(join(raw_im_Path, f))]
-    gt_images =\
-        [f for f in listdir(gt_im_path) if f.endswith(".tif") and isfile(join(gt_im_path, f))]
+    data_tuple = []
+    for folder in sorted(os.listdir(general_path)):
+        for file in sorted(os.listdir(general_path + '/' + folder)):
+            full_path = general_path + '/' + folder + '/' + file
+            data_tuple.append((full_path, folder))
 
-    # Paths to store the ROIs
-    false_positive_path = general_path + "false_positive"
-    true_positive_path = general_path + "true_positive"
-
-    return [raw_im_Path, gt_im_path, raw_images, gt_images, false_positive_path, true_positive_path]
+    images_df = pd.DataFrame(data_tuple, columns=['File', 'Class'])
+    return images_df
 
 
 def extract_features(roi, contour, roi_bw):

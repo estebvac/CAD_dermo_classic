@@ -1,7 +1,7 @@
 import cv2 as opencv;
 import numpy as np;
 
-def show_image(img_to_show, img_name, factor=1.0):
+def show_image(img_to_show, img_name="Image View", factor=1.0):
     """Function to display an image with a specific window name and specific resize factor
 
     Parameters

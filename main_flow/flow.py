@@ -2,7 +2,7 @@ from os.path import join
 
 import cv2
 import numpy as np
-from candidates_detection.find_candidates import find_candidates
+from candidates_detection.find_candidates import segment_image
 from false_positive_reduction.false_positive_reduction import border_false_positive_reduction
 from evaluation.dice_similarity import extract_ROI
 from feature_extraction.build_features_file import extract_features
@@ -41,7 +41,7 @@ def __generate_outputs (img, rois, output):
     cv2.imwrite(output, normalized_img)
 
 
-def __process_scales(filename, img, all_scales):
+def __process_features(filename, img, roi):
     '''
     Process the resulting scales of the segmentation
     Parameters
@@ -57,29 +57,19 @@ def __process_scales(filename, img, all_scales):
     '''
 
     dataframe = []
-    for slice_counter in np.arange(all_scales.shape[2]):
-        slice = all_scales[:, :, slice_counter]
-
-        if slice.max() <= 0:
-            continue
-
-        slice = 255 * slice
-        _, contours, _ = cv2.findContours(slice, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        for roi_counter in np.arange(len(contours)):
-            roi, boundaries = extract_ROI(contours[roi_counter], img)
-            bw_img = np.zeros_like(img)
-            cv2.drawContours(bw_img, contours, roi_counter, 1, -1)
-            roi_bw, _ = extract_ROI(contours[roi_counter], bw_img)
-
-            [cnt_features, textures, hu_moments, lbp, tas_features, hog_features] = \
-                extract_features(roi, contours[roi_counter], roi_bw)
-            entry = create_entry(
-                filename, slice_counter, roi_counter, cnt_features, textures, hu_moments, lbp, tas_features, hog_features, contours[roi_counter], slice_counter)
-            dataframe.append(entry)
+    _, contours, _ = cv2.findContours(255 *roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    for roi_counter in np.arange(min(len(contours), 1)):
+        roi_color, boundaries = extract_ROI(contours[roi_counter], img)
+        roi_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        [cnt_features, textures, hu_moments, lbp, tas_features, hog_features] = \
+            extract_features(roi_gray, contours[roi_counter], roi)
+        entry = create_entry(
+            filename, cnt_features, textures, hu_moments, lbp, tas_features, hog_features, contours[roi_counter])
+        dataframe.append(entry)
 
     return dataframe
 
-def process_single_image(path, filename):
+def process_single_image(filename, debug=False):
     '''
     Process a single image extracting the ROIS and the features
     Parameters
@@ -94,11 +84,10 @@ def process_single_image(path, filename):
     img             numpy arrray containing the image
 
     '''
-    img = cv2.imread(join(path, filename), cv2.IMREAD_UNCHANGED)
-    all_scales = find_candidates(img, 3, debug=False)
-    all_scales = border_false_positive_reduction(all_scales, img)
-    features = __process_scales(join(path, filename), img, all_scales)
-    return [all_scales, features, img]
+    img = cv2.imread(filename, cv2.IMREAD_UNCHANGED)
+    roi = segment_image(img, debug)
+    features = __process_features(filename, img, roi)
+    return [roi, features, img]
 
 
 def segment_single_image(path, filename):

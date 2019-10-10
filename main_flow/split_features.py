@@ -61,16 +61,14 @@ def __unfold_features(list_of_features):
     return new_feature_list
 
 
-def create_entry(path_name, slice_counter, roi_counter, cnt_features, textures,
-                 hu_moments, lbp, tas_features, hog_features, contour, layer):
+def create_entry(path_name, cnt_features, textures,
+                 hu_moments, lbp, tas_features, hog_features, contour):
     '''
     Create a dictionary of all the extracted features:
 
     Parameters
     ----------
     path_name
-    slice_counter
-    roi_counter
     cnt_features
     textures
     hu_moments
@@ -78,7 +76,6 @@ def create_entry(path_name, slice_counter, roi_counter, cnt_features, textures,
     tas_features
     hog_features
     contour
-    layer
 
     Returns
     -------
@@ -87,8 +84,6 @@ def create_entry(path_name, slice_counter, roi_counter, cnt_features, textures,
     '''
     dictionary = {
         'File name': path_name,
-        'Slice': slice_counter,
-        'Roi number': roi_counter,
         'Contour features': cnt_features,
         'Haralick Features': textures,
         'Hu moments': hu_moments,
@@ -97,7 +92,6 @@ def create_entry(path_name, slice_counter, roi_counter, cnt_features, textures,
         'HOG features': hog_features,
         'Contour_np': contour,
         'Contour': str(contour.tolist()),
-        'Layer': layer
     }
 
     return dictionary

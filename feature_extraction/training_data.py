@@ -8,6 +8,7 @@ from evaluation.dice_similarity import dice_similarity
 import progressbar
 from main_flow.split_features import create_features_dataframe, drop_unwanted_features
 
+
 def __get_optimal_dice(roi_mask, gts):
     '''
     Get the dice score of a ROI
@@ -85,46 +86,47 @@ def label_findings(gt_path, filename, features, groundtruths_filenames):
     return [labels, dices]
 
 
-def __get_features_and_label(dataset_path, images_name):
+def __get_features(full_images_df, debug=False):
     '''
     calculate the features of all the images of the dataset
     Parameters
     ----------
-    dataset_path    String path to the dataset
-    images_name     String name of the input image
+    full_images_df  Dataframe containing the path and class of all the images
 
     Returns
     -------
-    total_labels    labels of the ROIs
     total_features  feature vector of all the ROIs in the image
-    total_dices     Dice score of all the ROIs in the image
 
     '''
-    [raw_im_path, gt_im_path, _, gt_images, _, _] = read_images(dataset_path)
+
+    total_images = len(full_images_df)
 
     total_labels = []
     total_features = []
-    total_dices = []
-    total_images = len(images_name)
 
-    bar = progressbar.ProgressBar(maxval=total_images, widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+    bar = progressbar.ProgressBar(maxval=total_images,
+                                  widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
-    for img_counter in range(0, total_images):
-        print("Processing img " + str(img_counter) + " of " + str(total_images))
-        [_, features, _] =\
-            process_single_image(raw_im_path, images_name[img_counter])
-        [labels, dices] = label_findings(gt_im_path, images_name[img_counter], features, gt_images)
+    for img_counter in range(0, 5):#range(0, total_images):
+        [_, features, _] = process_single_image(full_images_df['File'][img_counter], debug)
+        #[labels, dices] = label_findings(gt_im_path, images_name[img_counter], features, gt_images)
+
+
         total_features.extend(features)
-        total_dices.extend(dices)
-        total_labels.extend(labels)
+
+        label = 'n'
+        if full_images_df['Class'][img_counter] == 'les':
+            label = 'l'
+
+        total_labels.extend(label)
         bar.update(img_counter + 1)
 
     bar.finish()
 
-    return [total_labels, total_features, total_dices]
+    return [total_labels, total_features]
 
 
-def partition_data(dataset_path):
+def flow_from_directory(dataset_path):
     '''
     NOT used:  Partition of the data for testing and training
     Parameters
@@ -136,32 +138,15 @@ def partition_data(dataset_path):
     dataframes:     partitioned dataframes of test and train
 
     '''
-    [raw_im_path, gt_im_path, raw_images, gt_images, _, _] = read_images(dataset_path)
 
-    images_with_masses = list(set(raw_images) & set(gt_images))
-    images_without_masses = list(set(raw_images) - set(gt_images))
+    # Read the training and validation datasets
+    train_images_df = read_images(dataset_path + '/train')
+    val_images_df = read_images(dataset_path + '/val')
 
-    np.random.seed(42)
-
-    # Choose proper dataset: 75% images with masses are for training while 25% for testing
-    # 80% images without masses for training while 20% for testing
-
-    index_imgs_with_masses= np.arange(len(images_with_masses))
-    index_imgs_without_masses = np.arange(len(images_without_masses))
-    images_with_masses_train =\
-        np.array(np.random.choice(index_imgs_with_masses, np.uint(1*len(index_imgs_with_masses)),replace=False))
-    images_without_masses_train =\
-        np.array(np.random.choice(index_imgs_without_masses, np.uint(1*len(index_imgs_without_masses)),replace=False))
-
-    # GET THE TRAINING SET:
-    training_images_with_masses = [images_with_masses[i] for i in images_with_masses_train]
-    training_images_without_masses = [images_without_masses[i] for i in images_without_masses_train]
-
-    # GET THE TESTING SET:
-    testing_images_with_masses = list(set(images_with_masses) - set(training_images_with_masses))
-    testing_images_without_masses = list(set(images_without_masses) - set(training_images_without_masses))
-
-    return [training_images_with_masses, training_images_without_masses, testing_images_with_masses, testing_images_without_masses]
+    # Merge the these datasets to perform K-Fold cross validation in the classification steps
+    full_dataset_df = train_images_df.append(val_images_df)
+    full_dataset_df.index = range(len(full_dataset_df))
+    return [full_dataset_df]
 
 
 def prepate_datasets(dataset_path):
@@ -178,21 +163,16 @@ def prepate_datasets(dataset_path):
 
     '''
 
-    [training_images_with_masses, training_images_without_masses, testing_images_with_masses, testing_images_without_masses] =\
-        partition_data(dataset_path)
-
-    training = training_images_with_masses + training_images_without_masses
-    #testing = testing_images_with_masses + testing_images_without_masses
+    [full_images_df] = flow_from_directory(dataset_path)
 
     print("Preparing training set!\n")
-    [training_labels, training_features, training_dices] = __get_features_and_label(dataset_path, training)
+    [training_labels, training_features] = __get_features(full_images_df, debug=True)
 
     [df_features, tags] = create_features_dataframe(training_features)
     training_features = 0
-    classes_and_dices = pd.DataFrame(np.array([training_labels, training_dices]).transpose(), columns=["Class", "Dice"])
-    tags = pd.concat([tags, classes_and_dices], axis=1)
+    tag_df = pd.DataFrame(np.array([training_labels]).transpose(), columns=["Class"])
     df_features = drop_unwanted_features(df_features)
-    #df_features = normalize_dataframe(df_features)
+    # df_features = normalize_dataframe(df_features)
 
     df_features.to_csv(join(dataset_path, "training.csv"))
-    tags.to_csv(join(dataset_path, "training_metadata.csv"))
+    tag_df.to_csv(join(dataset_path, "training_metadata.csv"))
