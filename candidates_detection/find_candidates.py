@@ -30,7 +30,7 @@ def segment_image(img, debug=False):
     # = cv.equalizeHist(gray_image)
 
     #Segment with watershed
-    roi = watershed_segment(gray_image, debug=debug)
+    roi = watershed_segment(gray_image, debug)
 
     return roi
 
@@ -46,27 +46,11 @@ def watershed_segment(img, debug=False):
     -------
 
     """
+
     # Get the 3 chanel image
     img_color = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
 
-    # Otsu Thresholding
-    blur = cv.GaussianBlur(img, (5, 5), 5)
-    _, thres = cv.threshold(blur, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
-
-    # sure background area
-    kernel = np.ones((15, 15), np.uint8)
-    sure_fg = cv.erode(thres, kernel, 3)
-
-    if debug:
-        imshow_contour(img_color, sure_fg, "Sure foreground" )
-
-    # Marker labelling
-    ret, markers = cv.connectedComponents(sure_fg)
-    if ret == 2:
-        sure_bg = cv.dilate(thres, kernel, 3)
-        sure_bg = (sure_bg  - 1) / 255
-        markers[sure_bg == 1] = 2
-
+    [markers, sure_fg_val, _] = create_marker(img, debug)
 
     # Apply watershed to get external pixels
     markers = markers.astype(np.int32)
@@ -83,13 +67,8 @@ def watershed_segment(img, debug=False):
     markers = cv.watershed(img_color, markers_base)
 
     # Select the central blob
-    central_val = np.zeros_like(img)
-    central_val = cv.circle(central_val,(300,225), 2, 1)
-    centroid_val = np.max(central_val*markers)
     roi = np.zeros_like(img)
-    roi[markers == centroid_val] = 1
-
-
+    roi[markers == sure_fg_val] = 1
 
     #print the segmentation
     if debug:
@@ -97,6 +76,66 @@ def watershed_segment(img, debug=False):
 
     return roi
 
+
+def create_marker(img, debug=False):
+
+    # Get the 3 chanel image
+    img_color = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+
+    # Otsu Thresholding
+    blur = cv.GaussianBlur(img, (5, 5), 5)
+    _, thres = cv.threshold(blur, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
+
+    # sure background area
+    kernel = np.ones((15, 15), np.uint8)
+    sure_fg = cv.erode(thres, kernel, 3)
+
+    # Marker labelling
+    ret, markers = cv.connectedComponents(sure_fg)
+
+
+    if ret == 2:
+        sure_bg = cv.dilate(thres, kernel, 3)
+        sure_bg = (sure_bg - 1) / 255
+        markers[sure_bg == 1] = 2
+        sure_fg_val = 1
+        sure_bg_val = 2
+        markers_out = markers
+
+    else:
+        extreme_borders = np.zeros_like(img)
+        extreme_borders[0:5, 0:5] = 1
+        extreme_borders[-5:-1, -5:-1] = 1
+        extreme_borders[0:5, -5:-1] = 1
+        extreme_borders[-5:-1, 0:5] = 1
+
+        extreme_borders_markers = extreme_borders * markers
+
+        if np.sum(extreme_borders_markers) == 0:
+            background_values = np.array(np.max(markers) + 1)
+            markers[extreme_borders] = background_values
+            extreme_borders_markers = extreme_borders * background_values
+
+        else:
+            extreme_borders_markers = extreme_borders_markers.astype(np.int8)
+            background_values = np.unique(extreme_borders_markers)
+
+        sure_bg_val = np.max(extreme_borders_markers)
+        sure_fg_val = sure_bg_val +1
+
+        markers_out = np.copy(markers)
+        for val in np.unique(markers):
+            if val > 0:
+                if val in  background_values:
+                    markers_out[markers == val] = sure_bg_val
+                else:
+                    markers_out[markers == val] = sure_fg_val
+
+    if debug:
+        plt.imshow(markers_out)
+        plt.show()
+
+    return [markers_out, sure_fg_val, sure_bg_val]
 
 
 def visual_callback_2d(background, fig=None):

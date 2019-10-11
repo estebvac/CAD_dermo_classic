@@ -107,7 +107,7 @@ def __get_features(full_images_df, debug=False):
     bar = progressbar.ProgressBar(maxval=total_images,
                                   widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
-    for img_counter in range(0, 5):#range(0, total_images):
+    for img_counter in range(0, total_images):
         [_, features, _] = process_single_image(full_images_df['File'][img_counter], debug)
         #[labels, dices] = label_findings(gt_im_path, images_name[img_counter], features, gt_images)
 
@@ -149,7 +149,7 @@ def flow_from_directory(dataset_path):
     return [full_dataset_df]
 
 
-def prepate_datasets(dataset_path):
+def prepate_datasets(dataset_path, debug):
     '''
     Prepare the feature extraction of all the dataset
 
@@ -166,7 +166,7 @@ def prepate_datasets(dataset_path):
     [full_images_df] = flow_from_directory(dataset_path)
 
     print("Preparing training set!\n")
-    [training_labels, training_features] = __get_features(full_images_df, debug=True)
+    [training_labels, training_features] = __get_features(full_images_df, debug)
 
     [df_features, tags] = create_features_dataframe(training_features)
     training_features = 0

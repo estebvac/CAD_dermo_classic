@@ -104,7 +104,7 @@ def segment_single_image(path, filename):
 
     '''
     total_features = []
-    [all_scales, features, img] = process_single_image(path, filename)
+    [all_scales, features, img] = process_single_image(path, False)
 
     total_features.extend(features)
     [df_features, tags] = create_features_dataframe(features)
