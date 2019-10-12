@@ -8,8 +8,7 @@ Created on Sat Oct  5 17:04:04 2019
 
 import numpy as np
 import cv2 as cv
-import time
-from utils import bring_to_256_levels, getLinearSE
+from .utils import bring_to_256_levels, getLinearSE
 
 def discard_small(input_image, connectivity):
     """Function to discard small connected components from binary image
@@ -165,7 +164,7 @@ def preprocess_and_remove_hair(img):
     binary = cv.morphologyEx(binary, cv.MORPH_DILATE, cv.getStructuringElement(cv.MORPH_ELLIPSE, (3,3)))
 
     #Apply inpainting
-    inpainted = cv.inpaint(img_gray, binary, 15, cv.INPAINT_TELEA)
+    inpainted = cv.inpaint(img, binary, 15, cv.INPAINT_TELEA)
 
     return inpainted, binary
 

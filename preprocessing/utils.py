@@ -41,7 +41,6 @@ def show_image(img_to_show, img_name, factor=1.0):
     num_rows = img_to_show.shape[0]
     num_cols = img_to_show.shape[1]
     img_to_show = cv.resize(img_to_show, None, fx=factor, fy=factor)
-    type(img)
     cv.imshow(img_name, img_to_show)
 
 def getLinearSE(size, angle):

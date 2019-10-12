@@ -1,7 +1,5 @@
 import cv2 as cv
-from preprocessing.is_right import is_right
-from preprocessing.remove_background import remove_background_and_apply_clahe
-from .utils import *
+from preprocessing.utils import *
 import morphsnakes as ms
 import matplotlib.pyplot as plt
 
@@ -25,12 +23,8 @@ def segment_image(img, debug=False):
     """
     # PREPROPCESSING STEP MISSING HERE
 
-    #Image Equalization
-    gray_image = cv.cvtColor(bring_to_256_levels(img), cv.COLOR_BGR2GRAY)
-    # = cv.equalizeHist(gray_image)
-
     #Segment with watershed
-    roi = watershed_segment(gray_image, debug)
+    roi = watershed_segment(img, debug)
 
     return roi
 
@@ -48,7 +42,8 @@ def watershed_segment(img, debug=False):
     """
 
     # Get the 3 chanel image
-    img_color = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+    img_color = img
+
 
     [markers, sure_fg_val, _] = create_marker(img, debug)
 
@@ -67,7 +62,7 @@ def watershed_segment(img, debug=False):
     markers = cv.watershed(img_color, markers_base)
 
     # Select the central blob
-    roi = np.zeros_like(img)
+    roi = np.zeros_like(img[:,:,1])
     roi[markers == sure_fg_val] = 1
 
     #print the segmentation
@@ -79,11 +74,11 @@ def watershed_segment(img, debug=False):
 
 def create_marker(img, debug=False):
 
-    # Get the 3 chanel image
-    img_color = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+    # Convert to gray
+    img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
     # Otsu Thresholding
-    blur = cv.GaussianBlur(img, (5, 5), 5)
+    blur = cv.GaussianBlur(img_gray, (5, 5), 5)
     _, thres = cv.threshold(blur, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
 
     # sure background area
@@ -103,7 +98,7 @@ def create_marker(img, debug=False):
         markers_out = markers
 
     else:
-        extreme_borders = np.zeros_like(img)
+        extreme_borders = np.zeros_like(img_gray)
         extreme_borders[0:5, 0:5] = 1
         extreme_borders[-5:-1, -5:-1] = 1
         extreme_borders[0:5, -5:-1] = 1
@@ -194,7 +189,7 @@ def imshow_contour(img_color, thresh, window_name ="Contours"):
     for contour in contours:
         cv.drawContours(img, contour, -1, (0, 255, 0), 3)
 
-    show_image(bring_to_256_levels(img), window_name)
+    show_image(img, window_name)
     cv.waitKey(10)
 
     return
