@@ -22,7 +22,6 @@ def __get_features(full_images_df, debug=False):
     '''
 
     total_images = len(full_images_df)
-
     total_labels = []
     total_features = []
 
