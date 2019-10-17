@@ -1,10 +1,10 @@
 from os.path import join
 
 import cv2
-import numpy as np
-from segmentation.segmentation_watershed import segment_image
+from skimage.io import imsave
+from segmentation.segmentation import *
 from feature_extraction.build_features_file import extract_features
-from preprocessing.preprocessing import preprocess_and_remove_hair
+from preprocessing.preprocessing import *
 from .split_features import create_entry, create_features_dataframe, drop_unwanted_features
 import matplotlib.pyplot as plt
 from preprocessing.utils import *
@@ -70,7 +70,7 @@ def __process_features(filename, img, roi):
 
     return dataframe
 
-def process_single_image(filename, debug=False):
+def process_single_image(path,filename, debug=False):
     '''
     Process a single image extracting the ROIS and the features
     Parameters
@@ -87,9 +87,11 @@ def process_single_image(filename, debug=False):
     '''
     img = cv.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
-    roi = segment_image(img_wo_hair, debug)
-    features = __process_features(filename, img, roi)
-    return [roi, features, img]
+    img_superpixel = segment_superpixel(img)
+    roi = segment_image(img_wo_hair, img_superpixel, False)
+    #save_mask(roi, path, filename)
+    features = __process_features(filename, img_wo_hair, roi)
+    return [roi, features, img_wo_hair]
 
 
 def segment_single_image(path, filename):
@@ -151,3 +153,12 @@ def extract_ROI(roi_contour, img,padding = 0.05):
     boundaries = x_b, y_b, w_b, h_b
 
     return roi, boundaries
+
+
+def save_mask(roi, path, filename):
+    directory = filename.split('/')[-3:]
+    directory = [path, 'mask'] + directory
+    seperator = '/'
+    write_path = seperator.join(directory).replace('\\','/')
+    cv2.imwrite(write_path, roi*255)
+    cv2.waitKey(1)

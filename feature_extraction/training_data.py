@@ -8,7 +8,7 @@ import progressbar
 from main_flow.split_features import create_features_dataframe, drop_unwanted_features
 
 
-def __get_features(full_images_df, debug=False):
+def __get_features(path, full_images_df, debug=False):
     '''
     calculate the features of all the images of the dataset
     Parameters
@@ -29,7 +29,7 @@ def __get_features(full_images_df, debug=False):
                                   widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
     for img_counter in range(0, total_images):
-        [_, features, _] = process_single_image(full_images_df['File'][img_counter], debug)
+        [_, features, _] = process_single_image(path, full_images_df['File'][img_counter], debug)
         #[labels, dices] = label_findings(gt_im_path, images_name[img_counter], features, gt_images)
 
 
@@ -87,7 +87,7 @@ def prepate_datasets(dataset_path, debug):
     [full_images_df] = flow_from_directory(dataset_path)
 
     print("Preparing training set!\n")
-    [training_labels, training_features] = __get_features(full_images_df, debug)
+    [training_labels, training_features] = __get_features(dataset_path,full_images_df, debug)
 
     [df_features, tags] = create_features_dataframe(training_features)
     training_features = 0
