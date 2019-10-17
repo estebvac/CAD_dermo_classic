@@ -2,8 +2,7 @@ from os import listdir, chdir
 from os.path import isfile, join
 import pandas as pd
 from preprocessing.utils import bring_to_256_levels
-from feature_extraction.features_extraction import *
-from feature_extraction.contour_features import *
+from feature_extraction.feature_extraction import *
 import os
 
 def read_images(general_path):

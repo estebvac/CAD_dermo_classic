@@ -5,7 +5,7 @@ import cv2
 from main_flow.flow import process_single_image
 from .build_features_file import read_images
 import progressbar
-from main_flow.split_features import create_features_dataframe, drop_unwanted_features
+#from main_flow.split_features import create_features_dataframe, drop_unwanted_features
 
 
 def __get_features(path, full_images_df, debug=False):

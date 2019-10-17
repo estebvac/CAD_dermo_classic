@@ -62,11 +62,8 @@ def __process_features(filename, img, roi):
     for roi_counter in np.arange(min(len(contours), 1)):
         roi_color, boundaries = extract_ROI(contours[roi_counter], img)
         roi_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        [cnt_features, textures, hu_moments, lbp, tas_features, hog_features] = \
-            extract_features(roi_gray, contours[roi_counter], roi)
-        entry = create_entry(
-            filename, cnt_features, textures, hu_moments, lbp, tas_features, hog_features, contours[roi_counter])
-        dataframe.append(entry)
+        features = extract_features(roi_color, contours[roi_counter], roi)
+        dataframe.append(features)
 
     return dataframe
 

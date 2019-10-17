@@ -61,8 +61,7 @@ def __unfold_features(list_of_features):
     return new_feature_list
 
 
-def create_entry(path_name, cnt_features, textures,
-                 hu_moments, lbp, tas_features, hog_features, contour):
+def create_entry(path_name, geometrical_features, hu_moments, lbp, texture_features, contour):
     '''
     Create a dictionary of all the extracted features:
 
@@ -84,14 +83,10 @@ def create_entry(path_name, cnt_features, textures,
     '''
     dictionary = {
         'File name': path_name,
-        'Contour features': cnt_features,
-        'Haralick Features': textures,
+        'Geometrical features': geometrical_features
         'Hu moments': hu_moments,
         'lbp': lbp,
-        'TAS features': tas_features,
-        'HOG features': hog_features,
-        'Contour_np': contour,
-        'Contour': str(contour.tolist()),
+        'Texture features': texture_features
     }
 
     return dictionary
