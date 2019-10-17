@@ -10,3 +10,5 @@ progressbar
 prettytable
 xgboost
 seaborn
+pyradiomics
+SimpleITK
