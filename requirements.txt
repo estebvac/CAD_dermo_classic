@@ -4,9 +4,11 @@ matplotlib==3.0.3
 numpy==1.16.2
 scikit-learn==0.20.3
 pandas
-scikit-image
+scikit-image==0.16.1
 mahotas
 progressbar
 prettytable
 xgboost
 seaborn
+pyradiomics
+SimpleITK

@@ -1,13 +1,9 @@
-from os.path import join
-
 import cv2
-import numpy as np
-from segmentation.segmentation_watershed import segment_image
-from feature_extraction.build_features_file import extract_features
-from preprocessing.preprocessing import preprocess_and_remove_hair
-from .split_features import create_entry, create_features_dataframe, drop_unwanted_features
-import matplotlib.pyplot as plt
+from segmentation.segmentation import *
+from feature_extraction.feature_extraction import extract_features
+from preprocessing.preprocessing import *
 from preprocessing.utils import *
+import pandas as pd
 
 COLOURS =\
     [(255, 0, 0),
@@ -19,27 +15,6 @@ COLOURS =\
      (100, 255, 0),
      (255, 100, 0),
      (255, 100, 100)]
-
-def __generate_outputs (img, rois, output):
-    '''
-    Generate output according to contours in rois
-    Parameters
-    ----------
-    img         numpy array of the input iimage
-    rois        OpenCv contours
-    output      output image
-
-    Returns
-    -------
-    Save an image with the overlaped region of interest
-
-    '''
-    normalized_img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-    normalized_img = cv2.cvtColor(normalized_img, cv2.COLOR_GRAY2BGR)
-    for roi in rois:
-        cv2.drawContours(normalized_img, roi.get('Contour'), -1, COLOURS[roi.get('Slice')], 2)
-
-    cv2.imwrite(output, normalized_img)
 
 
 def __process_features(filename, img, roi):
@@ -61,16 +36,17 @@ def __process_features(filename, img, roi):
     _, contours, _ = cv2.findContours(255 *roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     for roi_counter in np.arange(min(len(contours), 1)):
         roi_color, boundaries = extract_ROI(contours[roi_counter], img)
-        roi_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        [cnt_features, textures, hu_moments, lbp, tas_features, hog_features] = \
-            extract_features(roi_gray, contours[roi_counter], roi)
-        entry = create_entry(
-            filename, cnt_features, textures, hu_moments, lbp, tas_features, hog_features, contours[roi_counter])
-        dataframe.append(entry)
+        roi_bw, _ = extract_ROI(contours[roi_counter], roi)
+        features = extract_features(roi_color, contours[roi_counter], roi_bw)
+        if roi_counter == 0:
+            features_all = features
+        else:
+            np.concatenate((features_all, features), axis=0)
 
-    return dataframe
+    dataframe = pd.DataFrame(features_all)
+    return dataframe.transpose()
 
-def process_single_image(filename, debug=False):
+def process_single_image(path,filename, debug=False):
     '''
     Process a single image extracting the ROIS and the features
     Parameters
@@ -87,33 +63,12 @@ def process_single_image(filename, debug=False):
     '''
     img = cv.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
-    roi = segment_image(img_wo_hair, debug)
-    features = __process_features(filename, img, roi)
-    return [roi, features, img]
+    img_superpixel = segment_superpixel(img)
+    roi = segment_image(img_wo_hair, img_superpixel, False)
+    #save_mask(roi, path, filename)
+    features = __process_features(filename, img_wo_hair, roi)
+    return [roi, features, img_wo_hair]
 
-
-def segment_single_image(path, filename):
-    '''
-    Segment single image
-    Parameters
-    ----------
-    path            String path to the dataset
-    filename        String name of the input image
-
-    Returns
-    -------
-    all_scales      segmentated ROIs
-
-    '''
-    total_features = []
-    [all_scales, features, img] = process_single_image(path, False)
-
-    total_features.extend(features)
-    [df_features, tags] = create_features_dataframe(features)
-    df_features = drop_unwanted_features(df_features)
-    print(df_features.to_numpy())
-
-    return all_scales
 
 def extract_ROI(roi_contour, img,padding = 0.05):
     """
@@ -142,12 +97,21 @@ def extract_ROI(roi_contour, img,padding = 0.05):
     y_b = max(y_b - padd_y, 0)
 
     # Adjust the boundaries so we get a surrounding region
-    (img_max_y, img_max_x, img_chan) = img.shape
-    x_m = min(x_b + w_b + 2 * padd_x, img_max_x)
-    y_m = min(y_b + h_b + 2 * padd_y, img_max_y)
+    img_shape = img.shape
+    x_m = min(x_b + w_b + 2 * padd_x, img_shape[1])
+    y_m = min(y_b + h_b + 2 * padd_y, img_shape[0])
 
     # Extract the region of interest of the given contours
     roi = img[y_b:y_m, x_b:x_m]
     boundaries = x_b, y_b, w_b, h_b
 
     return roi, boundaries
+
+
+def save_mask(roi, path, filename):
+    directory = filename.split('/')[-3:]
+    directory = [path, 'mask'] + directory
+    seperator = '/'
+    write_path = seperator.join(directory).replace('\\','/')
+    cv2.imwrite(write_path, roi*255)
+    cv2.waitKey(1)

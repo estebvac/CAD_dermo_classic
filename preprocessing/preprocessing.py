@@ -9,8 +9,9 @@ Created on Sat Oct  5 17:04:04 2019
 import numpy as np
 import cv2 as cv
 from .utils import bring_to_256_levels, getLinearSE
+import matplotlib.pyplot as plt
 
-def discard_small(input_image, connectivity):
+def discard_small(input_image, threshold=50, connectivity=4):
     """Function to discard small connected components from binary image
 
     Parameters
@@ -28,10 +29,10 @@ def discard_small(input_image, connectivity):
     """
     output_image = np.zeros(input_image.shape)
     nlabels, labels, stats, centroids = cv.connectedComponentsWithStats(input_image, connectivity)
-    print('Num labels: ', nlabels)
+    #print('Num labels: ', nlabels)
     #TODO: Include info about shape of the element
-    for i_label in range(nlabels):
-        if(stats[i_label, 4] >= 50): #Only structures bigger than 50 pixels
+    for i_label in range(1, nlabels):
+        if(stats[i_label, 4] >= threshold): #Only structures bigger than 50 pixels
             output_image[labels==i_label] = 255
     return output_image.astype(np.uint8)
 
@@ -84,7 +85,7 @@ def applyCriteria(base_image, to_check, connectivity):
     """
     output_image = np.zeros(to_check.shape)
     nlabels, labels, stats, centroids = cv.connectedComponentsWithStats(to_check, connectivity)
-    print('Num labels: ', nlabels)
+    #print('Num labels: ', nlabels)
     for i_label in range(nlabels):
         num_pixels_element = np.count_nonzero(labels==i_label) #Number of pixels with current label
         one_element = np.zeros_like(base_image)
@@ -117,7 +118,7 @@ def preprocess_and_remove_hair(img):
     img_gray = cv.cvtColor(img_after_median, cv.COLOR_BGR2GRAY)
 
     #Add artificial hair
-    img_gray[:70,480:483] = max(np.min(img_gray) - 10, 0)
+    img_gray[:70,480:483] = max(np.min(img_gray) + 30, 0)
 
     #Apply bottom hat operation
     bottom_hatted1 = cv.morphologyEx(img_gray, cv.MORPH_BLACKHAT, cv.getStructuringElement(cv.MORPH_ELLIPSE,(7,7)))
@@ -167,4 +168,71 @@ def preprocess_and_remove_hair(img):
     inpainted = cv.inpaint(img, binary, 15, cv.INPAINT_TELEA)
 
     return inpainted, binary
+
+
+def remove_black_frame(img):
+    """
+
+    Parameters
+    ----------
+    img_wo_hair
+
+    Returns
+    -------
+
+    """
+    # Convert to gray
+    img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+    extreme_borders = np.zeros((img_gray.shape[0], img_gray.shape[1], 4), np.uint8)
+    length = 10
+    extreme_borders[0:length, 0:length, 0] = 1
+    extreme_borders[-length:-1, -length:-1, 1] = 1
+    extreme_borders[0:length, -length:-1, 2] = 1
+    extreme_borders[-length:-1, 0:length, 3] = 1
+    borders_remove = np.zeros_like(img_gray)
+
+    for index in range(4):
+        arrea_to_check = img_gray * extreme_borders[:, :, index]
+        average = np.sum(arrea_to_check) / np.sum(extreme_borders[:, :, index])
+        if average < 50:
+            borders_remove += extreme_borders[:, :, index]
+
+    # Otsu Thresholding
+    img_gray= cv.equalizeHist(img_gray)
+    blur = cv.medianBlur(img_gray, (5, 5), 5)
+    _, thres = cv.threshold(img_gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
+
+    # discard small elements
+    sure_fg = discard_small(thres, 500)
+
+    # Marker labelling
+    ret, markers = cv.connectedComponents(sure_fg)
+
+    #extreme_borders[length:-length, :] = 0
+    plt.subplot(1,2,1)
+    plt.imshow(img)
+    plt.subplot(1, 2, 2)
+    plt.imshow(borders_remove)
+    plt.show()
+
+    extreme_borders_markers = markers * borders_remove
+
+    borders_to_remove = np.zeros_like(img_gray, np.uint8 )
+    for index in np.unique(extreme_borders_markers):
+        if index > 0:
+            borders_to_remove[markers == index] = 1
+
+    # Apply inpainting
+    inpainted = cv.inpaint(img, borders_to_remove, 15, cv.INPAINT_TELEA)
+
+    plt.imshow(borders_to_remove)
+    plt.show()
+
+    plt.imshow(inpainted)
+    plt.show()
+
+    return inpainted
+
+
 
