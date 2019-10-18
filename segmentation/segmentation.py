@@ -1,10 +1,11 @@
-import cv2 as cv
+
 from preprocessing.utils import *
 import matplotlib.pyplot as plt
 from preprocessing.preprocessing import discard_small
 from skimage.segmentation import slic
 from skimage import color
 from skimage.filters.thresholding import threshold_otsu
+
 
 def segment_image(img_orig, img_subpixel, debug=False):
     """
@@ -33,9 +34,8 @@ def segment_image(img_orig, img_subpixel, debug=False):
     roi = np.zeros_like(img_subpixel[:, :, 1])
     roi[markers == sure_fg_val] = 1
 
-    #print the segmentation
+    # print the segmentation
     if debug:
-        #imshow_contour(img, roi, "Watershed result" )
         plt.imshow(img_orig)
         plt.contour(roi)
         plt.show()
@@ -50,15 +50,14 @@ def create_marker(img, debug=False):
 
     difference = np.max(img_gray) - np.min(img_gray)
     # check the max_min levels of the image
-    if difference< 150:
+    if difference < 150:
         # equalize the histogram of the Y channel
         clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        img_gray= clahe.apply(img_gray)
+        img_gray = clahe.apply(img_gray)
 
     # Otsu Thresholding
     blur = cv.GaussianBlur(img_gray, (5, 5), 5)
     # Remove the frame from the segmentation
-    #blur = blur * mask_eliptical(blur, -1, True)
     sure_fg = np.zeros_like(img_gray)
     it = 0
     ellipse = mask_eliptical(img, 15, False)
@@ -95,8 +94,19 @@ def create_marker(img, debug=False):
     return [markers_out, sure_fg_val, sure_bg_val]
 
 
-def imshow_contour(img_color, thresh, window_name ="Contours"):
-    # roi = roi.astype(np.uint8())
+def imshow_contour(img_color, thresh, window_name="Contours"):
+    """
+
+    Parameters
+    ----------
+    img_color       Color image
+    thresh          Contour of the ROI
+    window_name     Name to show in the window
+
+    Returns
+    -------
+
+    """
     img = np.copy(img_color)
     _, contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     for contour in contours:
@@ -108,26 +118,38 @@ def imshow_contour(img_color, thresh, window_name ="Contours"):
     return
 
 
+def mask_eliptical(img, border=-1, positive=True):
+    """
 
-def mask_eliptical(img, border = -1, positive=True):
+    Parameters
+    ----------
+    img         Original image
+    border      Border of the elipse to be created
+    positive    Boolean indicating to fill with 1 or 0
+
+    Returns
+    -------
+
+    """
     if positive:
-        ellipse_mask = np.zeros((img.shape[0],img.shape[1]))
+        ellipse_mask = np.zeros((img.shape[0], img.shape[1]))
         color = 1
     else:
         ellipse_mask = np.ones((img.shape[0], img.shape[1]))
         color = 0
 
-    axis_major = int(img.shape[1]/2)
-    axis_minor = int(img.shape[0]/2)
+    axis_major = int(img.shape[1] / 2)
+    axis_minor = int(img.shape[0] / 2)
     center = (axis_major, axis_minor)
+
     cv.ellipse(ellipse_mask,
-                center=center,
-                axes=(axis_major, axis_minor),
-                angle=0,
-                startAngle=0,
-                endAngle=360,
-                color=color,
-                thickness=border)
+               center=center,
+               axes=(axis_major, axis_minor),
+               angle=0,
+               startAngle=0,
+               endAngle=360,
+               color=color,
+               thickness=border)
 
     return ellipse_mask.astype(np.uint8)
 
@@ -147,29 +169,28 @@ def segment_superpixel(img, debug=False):
 
 
 def discard_not_centered(img, tx=100, ty=125, connectivity=4):
-    """Function to discard small connected components from binary image
+    """
 
     Parameters
     ----------
-    img : numpy array
-        Binary image.
-
-    connectivity : int
-        Type of connectivity to be used (4 or 8)
+    img             ROI image bw
+    tx              limit in the x axis
+    ty              limit in the y axis
+    connectivity    connectivity type either 2 or 4
 
     Returns
     -------
-    output_image : numpy array
-        Binary image without small components
+    Image removing the connected components outside a centered window
+
     """
     output_image = np.zeros(img.shape)
     nlabels, labels, stats, centroids = cv.connectedComponentsWithStats(img, connectivity)
-    #print('Num labels: ', nlabels)
-    #TODO: Include info about shape of the element
+
+    # TODO: Include info about shape of the element
     for i_label in range(1, nlabels):
         if ( (img.shape[1] / 2 - ty) < centroids[i_label, 0] < (img.shape[1] / 2 + ty)
                 and (img.shape[0] / 2 - tx) < centroids[i_label, 1] < (img.shape[0] / 2 + tx) ):
-            #Only structures centered
+            # Only structures centered
             output_image[labels==i_label] = 255
-            #print('centroid:', centroids[i_label,:])
+
     return output_image.astype(np.uint8)
