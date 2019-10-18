@@ -66,16 +66,16 @@ def flow_from_directory(dataset_path):
     '''
 
     # Read the training and validation datasets
-    train_images_df = read_images(dataset_path + '/train')
-    val_images_df = read_images(dataset_path + '/val')
+    train_images_df = read_images(dataset_path)
+    #val_images_df = read_images(dataset_path + '/val')
 
     # Merge the these datasets to perform K-Fold cross validation in the classification steps
-    full_dataset_df = train_images_df.append(val_images_df)
-    full_dataset_df.index = range(len(full_dataset_df))
-    return [full_dataset_df]
+    #full_dataset_df = train_images_df.append(val_images_df)
+    #full_dataset_df.index = range(len(full_dataset_df))
+    return [train_images_df]
 
 
-def prepate_datasets(dataset_path, debug):
+def prepate_datasets(dataset_path,output_name, debug=False):
     '''
     Prepare the feature extraction of all the dataset
 
@@ -92,4 +92,4 @@ def prepate_datasets(dataset_path, debug):
     [full_images_df] = flow_from_directory(dataset_path)
     print("Preparing training set!\n")
     [training_features] = __get_features(dataset_path,full_images_df, debug)
-    training_features.to_csv(join(dataset_path, "training.csv"))
+    training_features.to_csv(join(dataset_path, output_name))
