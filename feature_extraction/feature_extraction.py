@@ -1,16 +1,15 @@
 import numpy as np
-import os
 import cv2 as cv
 import mahotas as mt
 from radiomics import featureextractor
 import SimpleITK as sitk
 from math import copysign, log10
 from skimage.feature import hog
-from sklearn.cluster import KMeans
 from preprocessing.utils import bring_to_256_levels
 
+
 def get_elongation(m):
-    '''
+    """
     Compute elongation from the moments of a shape
     (From: https://stackoverflow.com/questions/14854592/retrieve-elongation-feature-in-python-opencv-what-kind-of-moment-it-supposed-to)
     Parameters
@@ -20,14 +19,15 @@ def get_elongation(m):
     Returns
     -------
     -               Elongation value
-    '''
-    
+    """
+
     x = m['mu20'] + m['mu02']
     y = 4 * m['mu11']**2 + (m['mu20'] - m['mu02'])**2
     return (x + y**0.5) / (x - y**0.5)
 
+
 def get_geometrical_features(contour):
-    '''
+    """
     Extract geometrical features of a ROI
 
     Parameters
@@ -37,7 +37,8 @@ def get_geometrical_features(contour):
     Returns
     -------
     geom_feat      all extracted geometrical features of a ROI
-    '''
+    """
+
     area = cv.contourArea(contour)
     perimeter = cv.arcLength(contour, True)
     ellipse = cv.fitEllipse(contour)
@@ -45,27 +46,25 @@ def get_geometrical_features(contour):
     major_axis_length = max(axes)
     minor_axis_length = min(axes)
 
-    equi_diameter = np.sqrt(4*area/np.pi)
     compactness = (4*np.pi*area)/(perimeter**2)
-    eccentricity = np.sqrt( 1 - (minor_axis_length/major_axis_length)**2) 
+    eccentricity = np.sqrt(1 - (minor_axis_length / major_axis_length) ** 2)
 
-    #Discrete compactness (https://core.ac.uk/download/pdf/82756900.pdf)
-    Cd = (4*area-perimeter)/2
-    Cd_min = area-1
-    Cd_max = (4*area - 4*np.sqrt(area))/2
-    Cd_N = (Cd - Cd_min)/(Cd_max - Cd_min)
+    # Discrete compactness (https://core.ac.uk/download/pdf/82756900.pdf)
+    cd = (4 * area - perimeter) / 2
+    cd_min = area-1
+    cd_max = (4*area - 4*np.sqrt(area))/2
+    cd_n = (cd - cd_min)/(cd_max - cd_min)
 
-    #Elongation
+    # Elongation
     m = cv.moments(contour)
     elongation = get_elongation(m)
-
     equi_diameter = np.sqrt(4*area/np.pi)
-
-    geom_feat = np.array([equi_diameter, compactness, elongation, eccentricity, Cd_N])
-
+    geom_feat = np.array([equi_diameter, compactness, elongation, eccentricity, cd_n])
     return geom_feat
 
+
 def get_color_based_features(roi_color, mask):
+
     #First, convert from RGB to CIEl*a*b*
     roi_lab = cv.cvtColor(roi_color, cv.COLOR_BGR2LAB)
     #Separate channels
@@ -73,8 +72,9 @@ def get_color_based_features(roi_color, mask):
     #Now cluster channels a and b for 4 clusters, using k-means
     return
 
+
 def get_texture_features(roi_gray, mask):
-    '''
+    """
     Extract texture features from ROI
 
     Parameters
@@ -85,53 +85,55 @@ def get_texture_features(roi_gray, mask):
     Returns
     -------
     texture_features    All extracted texture features of a ROI
-    '''
-    #First, get GLRLM features
-    data_spacing = [1,1,1]
+    """
+    # First, get GLRLM features
+    data_spacing = [1, 1, 1]
 
-    #Convert numpy arrays to sitk so that extractor.execute can be employed for GLRLM features
+    # Convert numpy arrays to sitk so that extractor.execute can be employed for GLRLM features
     sitk_img = sitk.GetImageFromArray(roi_gray)
-    sitk_img.SetSpacing((float(data_spacing[0]), float(data_spacing[1]), float(data_spacing[2]) ))
+    sitk_img.SetSpacing((float(data_spacing[0]), float(data_spacing[1]), float(data_spacing[2])))
     sitk_img = sitk.JoinSeries(sitk_img)
 
-    mask_mod = mask/255 + 1
+    mask_mod = mask / 255 + 1
     sitk_mask = sitk.GetImageFromArray(mask_mod)
-    sitk_mask.SetSpacing((float(data_spacing[0]), float(data_spacing[1]), float(data_spacing[2]) ))
+    sitk_mask.SetSpacing((float(data_spacing[0]), float(data_spacing[1]), float(data_spacing[2])))
     sitk_mask = sitk.JoinSeries(sitk_mask)
     sitk_mask = sitk.Cast(sitk_mask, sitk.sitkInt32)
-   
+
     # Parameters for radiomics extractor
     params = {}
     params['binWidth'] = 20
     params['sigma'] = [1, 2, 3]
     params['verbose'] = True
 
-    extractor = featureextractor.RadiomicsFeatureExtractor(**params) #For GLRLM features
+    # For GLRLM features
+    extractor = featureextractor.RadiomicsFeatureExtractor(**params)
     extractor.disableAllFeatures()
     extractor.enableFeatureClassByName('glrlm')
 
     result = extractor.execute(sitk_img, sitk_mask)
     glrlm_features_list = []
     for key, value in result.items():
-        if('glrlm' in key):
+        if 'glrlm' in key:
             glrlm_features_list.append(value.item())
 
     glrlm_features = np.array(glrlm_features_list)
 
     masked_roi = bring_to_256_levels(np.multiply(roi_gray, mask))
-    textures = mt.features.haralick(masked_roi, ignore_zeros = True)
+    textures = mt.features.haralick(masked_roi, ignore_zeros=True)
     haralick_features = textures.mean(axis=0)
- 
+
     texture_features = np.concatenate((haralick_features, glrlm_features), axis=0)
 
-    return texture_features 
+    return texture_features
+
 
 def get_asymmetry():
     pass
 
-# Hu moments (Shape features)
+
 def feature_hu_moments(contour):
-    '''
+    """
     Calculate the shape features based on HU moments
 
     Parameters
@@ -142,7 +144,7 @@ def feature_hu_moments(contour):
     -------
     hu_moments  numpy array containing the HU moments
 
-    '''
+    """
 
     hu_moments = cv.HuMoments(cv.moments(contour))
     # Log scale transform
@@ -152,7 +154,7 @@ def feature_hu_moments(contour):
 
 
 def multi_scale_lbp_features(roi):
-    '''
+    """
     Calculate multi scale local binary pattern based on mahotas
     Parameters
     ----------
@@ -161,15 +163,13 @@ def multi_scale_lbp_features(roi):
     Returns
     -------
     lbp         Histogram of multi scale lbp
-
-
-    '''
+    """
     roi_img = cv.normalize(roi, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
     roi_or = np.copy(roi_img)
     r = 1
     R = 1
     i = 0
-    lbp = np.zeros((5,36))
+    lbp = np.zeros((5, 36))
     while R < 35:
         lb_p = mt.features.lbp(roi_img, np.rint(R), 8, ignore_zeros=False)
         lb_p = lb_p / np.sum(lb_p)
@@ -187,8 +187,9 @@ def multi_scale_lbp_features(roi):
 
     return lbp.reshape((180,))
 
+
 def features_hog(roi):
-    '''
+    """
     Calculate a scale based Histogram of Oriented gradients based on ski-image
 
     Parameters
@@ -199,21 +200,19 @@ def features_hog(roi):
     -------
     hog features    numpy array containing a HOG descriptor of the image
 
-    '''
+    """
     width = np.int(roi.shape[0] / 10)
     height = np.int(roi.shape[1] / 10)
     w_t = np.int((roi.shape[0] - width * 10) / 2)
     h_t = np.int((roi.shape[1] - height * 10) / 2)
     crop_roi = roi[w_t: w_t + 10*width, h_t: h_t + 10*height]
     f_hog = hog(crop_roi, orientations=8, pixels_per_cell=(width, height),
-             cells_per_block=(1, 1), visualize=False, multichannel=False)
+                cells_per_block=(1, 1), visualize=False, multichannel=False)
     return f_hog
 
 
-
-
 def extract_features(roi_color, contour, mask):
-    '''
+    """
     Extract all the features of a ROI. A total of 41 features are extracted. LBP and HoG are not activated
 
     Parameters
@@ -225,30 +224,29 @@ def extract_features(roi_color, contour, mask):
     Returns
     -------
     feature_vector      All extracted features of a ROI
-    '''
-    
+    """
+
     roi_gray = cv.cvtColor(roi_color, cv.COLOR_BGR2GRAY)
 
-    #Geometrical features
+    # Geometrical features
     geometrical_features = get_geometrical_features(contour)
 
-    #Color based features
+    # Color based features
     get_color_based_features(roi_color, mask)
 
-
-    #LBP
+    # LBP
     lbp = multi_scale_lbp_features(roi_gray)
 
-    #Hu Moments
+    # Hu Moments
     hu_moments = feature_hu_moments(contour)
 
-    #Texture: Haralick features using Mahotas (vector 1x13)
+    # Texture: Haralick features using Mahotas (vector 1x13)
     texture_features = get_texture_features(roi_gray, mask)
 
-    #Asymmetry
-    #TODO
+    # Asymmetry
+    # TODO
 
     # HOG features
-    #hog_features = features_hog (roi_gray)
+    # hog_features = features_hog (roi_gray)
 
     return np.transpose(np.concatenate((geometrical_features, hu_moments, lbp, texture_features), axis=0))

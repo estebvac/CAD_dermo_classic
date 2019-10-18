@@ -1,12 +1,9 @@
-from os import listdir, chdir
-from os.path import isfile, join
 import pandas as pd
-from preprocessing.utils import bring_to_256_levels
-from feature_extraction.feature_extraction import *
 import os
 
+
 def read_images(general_path):
-    '''
+    """
     Read all the images of the dataset
 
     Parameters
@@ -17,7 +14,7 @@ def read_images(general_path):
     -------
     images_dataframe    Datafame containing the String path of the image and the class
 
-    '''
+    """
 
     #  Read the dataset
     data_tuple = []

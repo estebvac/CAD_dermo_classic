@@ -2,9 +2,9 @@ import cv2 as cv
 from preprocessing.utils import *
 import matplotlib.pyplot as plt
 from preprocessing.preprocessing import discard_small
-from skimage.segmentation import slic, mark_boundaries, relabel_sequential
+from skimage.segmentation import slic
 from skimage import color
-from skimage.filters.thresholding import threshold_otsu, threshold_multiotsu
+from skimage.filters.thresholding import threshold_otsu
 
 def segment_image(img_orig, img_subpixel, debug=False):
     """

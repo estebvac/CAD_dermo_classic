@@ -1,28 +1,27 @@
-
 import numpy as np
 import cv2 as cv
 
+
 def bring_to_256_levels(the_image):
-    """Function normalize image to 0-255 range (8 bits)
+    """
+    Function normalize image to 0-255 range (8 bits)
 
     Parameters
     ----------
-    image : numpy array
-        Original image.
+    the_image : numpy array Original image.
 
     Returns
     -------
     img_new : numpy array
         Normalized image
     """
-
-
-    if(the_image.max() == the_image.min()):
+    if the_image.max() == the_image.min():
         return the_image.astype(np.uint8)
     img_as_double = the_image.astype(float)
     normalized = np.divide((img_as_double - np.amin(img_as_double)), (np.amax(img_as_double) - np.amin(img_as_double)))
     normalized = normalized*(pow(2, 8) - 1)
     return normalized.astype(np.uint8)
+
 
 def show_image(img_to_show, img_name, factor=1.0):
     """Function to display an image with a specific window name and specific resize factor
@@ -37,11 +36,9 @@ def show_image(img_to_show, img_name, factor=1.0):
         Resize factor (between 0 and 1)
 
     """
-
-    num_rows = img_to_show.shape[0]
-    num_cols = img_to_show.shape[1]
     img_to_show = cv.resize(img_to_show, None, fx=factor, fy=factor)
     cv.imshow(img_name, img_to_show)
+
 
 def getLinearSE(size, angle):
     """Function to create a linear SE with a specific size and angle.
@@ -73,19 +70,21 @@ def getLinearSE(size, angle):
         Binary array of size <size> that contains linear SE with approximate angle given by <angle>
     """
 
-    if angle==1 or angle == 5:
+    if angle == 1 or angle == 5:
         SE_horizontal = np.zeros((size, size))
         SE_horizontal[int((size - 1) / 2), :] = np.ones((1, size))
-        if angle==1:
+        if angle == 1:
             return SE_horizontal.astype(np.uint8)
-        else: #If vertical
+        else: # If vertical
             return np.transpose(SE_horizontal).astype(np.uint8)
-    elif angle == 3 or angle == 7: #If 45 or 135
+
+    elif angle == 3 or angle == 7:      # If 45 or 135
         SE_diagonal = np.eye(size)
         if angle == 3:
             return np.fliplr(SE_diagonal).astype(np.uint8)
         else:
             return SE_diagonal.astype(np.uint8)
+
     elif angle in [2,4,6,8]: #Angle more comples
         SE_diff = np.zeros((size, size))
         row = int(((size-1)/2)/2)
@@ -105,7 +104,8 @@ def getLinearSE(size, angle):
         elif angle == 4:
             return np.fliplr(np.transpose(SE_diff)).astype(np.uint8)
         else:
-            return np.transpose(SE_diff).astype(np.uint8)  
+            return np.transpose(SE_diff).astype(np.uint8)
+
     elif angle in [9,10,11,12]:
         SE_diff = np.zeros((size, size))
         row = int(((size-1)/2)/2) + int( ((((size-1)/2)/2)-1)/2 )

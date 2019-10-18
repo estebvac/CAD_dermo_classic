@@ -5,24 +5,12 @@ from preprocessing.preprocessing import *
 from preprocessing.utils import *
 import pandas as pd
 
-COLOURS =\
-    [(255, 0, 0),
-     (0, 255, 0),
-     (0, 0, 255),
-     (255, 255, 0),
-     (255, 0, 255),
-     (0, 255, 255),
-     (100, 255, 0),
-     (255, 100, 0),
-     (255, 100, 100)]
 
-
-def __process_features(filename, img, roi):
-    '''
+def __process_features(img, roi):
+    """
     Process the resulting scales of the segmentation
     Parameters
     ----------
-    filename:       input filename
     img             numpy array containing the image
     all_scales      numpy array containing all the segmented ROIS in all scales
 
@@ -30,10 +18,8 @@ def __process_features(filename, img, roi):
     -------
     dataframe       dataframe of all the ROIs in the image
 
-    '''
-
-    dataframe = []
-    _, contours, _ = cv2.findContours(255 *roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    """
+    _, contours, _ = cv2.findContours(255 * roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     for roi_counter in np.arange(min(len(contours), 1)):
         roi_color, boundaries = extract_ROI(contours[roi_counter], img)
         roi_bw, _ = extract_ROI(contours[roi_counter], roi)
@@ -46,8 +32,9 @@ def __process_features(filename, img, roi):
     dataframe = pd.DataFrame(features_all)
     return dataframe.transpose()
 
-def process_single_image(path,filename, debug=False):
-    '''
+
+def process_single_image(filename, debug=False):
+    """
     Process a single image extracting the ROIS and the features
     Parameters
     ----------
@@ -60,13 +47,12 @@ def process_single_image(path,filename, debug=False):
     features        dataframe of all the features of the ROIs in the image
     img             numpy arrray containing the image
 
-    '''
+    """
     img = cv.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
-    img_superpixel = segment_superpixel(img)
-    roi = segment_image(img_wo_hair, img_superpixel, False)
-    #save_mask(roi, path, filename)
-    features = __process_features(filename, img_wo_hair, roi)
+    img_superpixel = segment_superpixel(img, debug)
+    roi = segment_image(img_wo_hair, img_superpixel, debug)
+    features = __process_features(img_wo_hair, roi)
     return [roi, features, img_wo_hair]
 
 
@@ -109,9 +95,22 @@ def extract_ROI(roi_contour, img,padding = 0.05):
 
 
 def save_mask(roi, path, filename):
+    """
+    Save a mask of the ROI
+
+    Parameters
+    ----------
+    roi         Mask of the lesion
+    path        Path to save the file
+    filename    Name of the file to save
+
+    Returns     Nothing
+    -------
+
+    """
     directory = filename.split('/')[-3:]
     directory = [path, 'mask'] + directory
     seperator = '/'
-    write_path = seperator.join(directory).replace('\\','/')
+    write_path = seperator.join(directory).replace('\\', '/')
     cv2.imwrite(write_path, roi*255)
     cv2.waitKey(1)

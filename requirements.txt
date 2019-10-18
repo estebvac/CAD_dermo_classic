@@ -6,9 +6,9 @@ scikit-learn==0.20.3
 pandas
 scikit-image==0.16.1
 mahotas
-progressbar
 prettytable
 xgboost
 seaborn
 pyradiomics
 SimpleITK
+tqdm
