@@ -229,6 +229,10 @@ def find_segmented(binary):
             continue
         # calculate moments for each contour
         M = cv.moments(cnt)
+        if(M["m00"]==0):
+            distances[i_dist] = 10000
+            i_dist += 1
+            continue
         # calculate x,y coordinate of center
         center_cnt = np.array([int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])])
         dst = distance.euclidean(center_cnt, center)
@@ -237,10 +241,32 @@ def find_segmented(binary):
 
     min_dist = np.argmin(distances)
     cv.fillPoly(output_image, pts =[contours[min_dist]], color=255)
-    return output_image
+    
+    _, contours, _ = cv.findContours(output_image.astype(np.uint8), cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+    if(len(contours)>0): #If area is too small, erase it and take a circle in the middle
+        area_cnt = cv.contourArea(contours[0])
+        M = cv.moments(contours[0])
+        # calculate x,y coordinate of center
+        if(M["m00"]!=0):
+            center_cnt = np.array([int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])])
+            dst = distance.euclidean(center_cnt, center)
+        else:
+            dst = 10
+        if(area_cnt<30 or dst>150):
+            cv.fillPoly(output_image, pts =[contours[0]], color=0)
+            cv.circle(output_image, (center[0], center[1]), 100, 255, -1)
+
+    if(len(contours)==0): #If segmentation failed, take a circle in the middle of the image
+        cv.circle(output_image, (center[0], center[1]), 100, 255, -1)
+
+    #Bring to 0-1 range
+    max_val = np.max(output_image.astype(np.uint8))
+    output_image = output_image/max_val
+
+    return output_image.astype(np.uint8)
     
 
-def segment_with_level_sets(img_gray):
+def segment_with_level_sets(img):
     """ Function to perform segmentation with level sets. img_gray should not contain hairs nor black zones
 
     Parameters
@@ -253,6 +279,9 @@ def segment_with_level_sets(img_gray):
 
     """
     #First, find out if it is necessary to appy inpainting to remove black zones
+
+    img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
     r1 = img_gray[:5,:5]
     r2 = img_gray[:5,-5:]
     r3 = img_gray[-5:,:5]
