@@ -27,7 +27,11 @@ def get_elongation(m):
 
     x = m['mu20'] + m['mu02']
     y = 4 * m['mu11']**2 + (m['mu20'] - m['mu02'])**2
-    return (x + y**0.5) / (x - y**0.5)
+    try:
+        el = (x + y**0.5) / (x - y**0.5)
+    except:
+        el = 0.5
+    return el 
 
 
 def get_num_colors(centers):
@@ -290,7 +294,12 @@ def get_texture_geometrical_and_asymetry_features(roi_gray, cnt, mask):
     total_area = len(mask[mask>0])
     center_row = int(np.floor(num_rows/2))
     center_col = int(np.floor(num_cols/2))
-    (x,y),(MA,ma),angle = cv.fitEllipse(cnt)
+    try:
+        (x,y),(MA,ma),angle = cv.fitEllipse(cnt)
+    except: #If some error makes cnt to have too few points
+        x = center_col
+        y = center_row
+        angle = 90
     x_int = int(np.floor(x))
     y_int = int(np.floor(y))
     mMA = np.tan(-angle*(np.pi)/180)
