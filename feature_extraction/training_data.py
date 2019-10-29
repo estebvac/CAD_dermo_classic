@@ -6,7 +6,7 @@ from tqdm import tqdm
 import time
 
 
-def __get_features(path, full_images_df, debug=False):
+def __get_features(path, full_images_df, segm_alg, debug=False):
     """
     calculate the features of all the images of the dataset
     Parameters
@@ -20,7 +20,7 @@ def __get_features(path, full_images_df, debug=False):
     """
     total_images = len(full_images_df)
     for img_counter in tqdm(range(0, total_images)):
-        [_, features, _] = process_single_image(full_images_df['File'][img_counter], debug)
+        [_, features, _] = process_single_image(full_images_df['File'][img_counter], segm_alg, debug)
 
         if full_images_df['Class'][img_counter] == 'les':
             features.insert(0, "label", 'les', True)
@@ -39,7 +39,7 @@ def __get_features(path, full_images_df, debug=False):
     return [total_features]
 
 
-def prepate_datasets(dataset_path, output_name, debug=False):
+def prepate_datasets(dataset_path, output_name, segm_alg = "ws", debug=False):
     """
     Prepare the feature extraction of all the dataset
 
@@ -57,6 +57,6 @@ def prepate_datasets(dataset_path, output_name, debug=False):
 
     full_images_df = read_images(dataset_path)
     print("Preparing training set!\n")
-    [training_features] = __get_features(dataset_path, full_images_df, debug)
+    [training_features] = __get_features(dataset_path, full_images_df, segm_alg, debug)
     training_features.to_csv(join(dataset_path, output_name))
     return training_features

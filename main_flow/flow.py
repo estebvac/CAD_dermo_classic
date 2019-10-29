@@ -33,7 +33,7 @@ def __process_features(img, roi):
     return dataframe.transpose()
 
 
-def process_single_image(filename, debug=False):
+def process_single_image(filename, segm_alg, debug=False):
     """
     Process a single image extracting the ROIS and the features
     Parameters
@@ -50,8 +50,11 @@ def process_single_image(filename, debug=False):
     """
     img = cv.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
-    img_superpixel = segment_superpixel(img, debug)
-    roi = segment_image(img_wo_hair, img_superpixel, debug)
+    if(segm_alg=="ws"):
+        img_superpixel = segment_superpixel(img, debug)
+        roi = segment_image(img_wo_hair, img_superpixel, debug)
+    elif(segm_alg=="ls"):
+        roi = segment_with_level_sets(img_wo_hair)
     features = __process_features(img_wo_hair, roi)
     return [roi, features, img_wo_hair]
 
