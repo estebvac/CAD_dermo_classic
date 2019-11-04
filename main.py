@@ -1,9 +1,9 @@
 from feature_extraction.training_data import prepate_datasets
 
-path_train = r"C:\Users\esteb\Documents\CAD_PROJECT\DERMO_TEST\train"
-path_val = r"C:\Users\esteb\Documents\CAD_PROJECT\DERMO_TEST\val"
+path_train = r"C:\MyData\MAIA\Semester3\CAD\Projects\Dermo\Data\train"
+path_val = r"C:\MyData\MAIA\Semester3\CAD\Projects\Dermo\Data\val"
 
-segmentation_alg = "ls" #"ws"
+segmentation_alg = "ws" #"ws"
 
-prepate_datasets(path_train, "train.csv", segm_alg = segmentation_alg)
-prepate_datasets(path_val, "val.csv", segm_alg = segmentation_alg)
+prepate_datasets(path_train, "train_with_HoG.csv", segm_alg = segmentation_alg)
+#prepate_datasets(path_val, "val_with_HoG.csv", segm_alg = segmentation_alg)

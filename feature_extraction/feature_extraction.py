@@ -286,14 +286,26 @@ def get_texture_features(roi_gray, mask):
 
 def get_texture_geometrical_and_asymetry_features(roi_gray, cnt, mask):
 
-    texture_features = get_texture_features(roi_gray, mask)
-    geom_features = get_geometrical_features(cnt)
     #First, extract features for asymmetry
     num_rows = mask.shape[0]
     num_cols = mask.shape[1]
     total_area = len(mask[mask>0])
     center_row = int(np.floor(num_rows/2))
     center_col = int(np.floor(num_cols/2))
+
+    if(len(cnt)<5): #If less than 5 points in contour, generate a contour with 8 points (rectangle)
+        cnt = np.array([[center_row-np.floor(center_row/2), center_col-np.floor(center_col/2)], \
+                        [center_row-np.floor(center_row/2), center_col], \
+                        [center_row-np.floor(center_row/2), center_col+np.floor(center_col/2)], \
+                        [center_row, center_col+np.floor(center_col/2)], \
+                        [center_row+np.floor(center_row/2), center_col+np.floor(center_col/2)], \
+                        [center_row+np.floor(center_row/2), center_col], \
+                        [center_row+np.floor(center_row/2), center_col-np.floor(center_col/2)],
+                        [center_row, center_col-np.floor(center_col/2)]], dtype = np.int32)
+        cnt = cnt[:,np.newaxis,:] #Add new axis so that it's similar to normal contours
+    geom_features = get_geometrical_features(cnt)
+    texture_features = get_texture_features(roi_gray, mask)
+
     try:
         (x,y),(MA,ma),angle = cv.fitEllipse(cnt)
     except: #If some error makes cnt to have too few points
@@ -475,6 +487,14 @@ def extract_features(roi_color, contour, mask):
     _, contours, _ = cv.findContours(mask.astype(np.uint8), cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
     contour = contours[0]
 
+    try:
+        #Geometrical features
+        geom_features = get_geometrical_features(contour)
+        # Hu Moments
+        hu_moments = feature_hu_moments(contour)
+    except:
+        geom_features = np.zeros((5,))
+        hu_moments = np.zeros((7,))
 
     roi_gray = cv.cvtColor(roi_color, cv.COLOR_BGR2GRAY)
 
@@ -484,13 +504,10 @@ def extract_features(roi_color, contour, mask):
     # LBP
     lbp = multi_scale_lbp_features(roi_gray)
 
-    # Hu Moments
-    hu_moments = feature_hu_moments(contour)
-
-    # Texture, shape and asymmetry
-    texture_geom_and_assymetry_features = get_texture_geometrical_and_asymetry_features(roi_gray, contour, mask)
+    # Texture
+    texture_features = get_texture_features(roi_gray, mask)
 
     # HOG features
-    # hog_features = features_hog (roi_gray)
+    hog_features = features_hog (roi_gray)
 
-    return np.transpose(np.concatenate((texture_geom_and_assymetry_features, color_features, hu_moments, lbp), axis=0))
+    return np.transpose(np.concatenate((geom_features, texture_features, color_features, hu_moments, lbp, hog_features), axis=0))

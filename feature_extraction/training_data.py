@@ -21,7 +21,7 @@ def __get_features(path, full_images_df, segm_alg, debug=False):
     total_images = len(full_images_df)
     for img_counter in tqdm(range(0, total_images)):
         [_, features, _] = process_single_image(full_images_df['File'][img_counter], segm_alg, debug)
-
+        print(full_images_df['File'][img_counter])
         if full_images_df['Class'][img_counter] == 'les':
             features.insert(0, "label", 'les', True)
         else:
