@@ -1,6 +1,6 @@
 import cv2
 from segmentation.segmentation import *
-from feature_extraction.feature_extraction import extract_features
+from feature_extraction.feature_extraction import extract_features_no_segm
 from preprocessing.preprocessing import *
 from preprocessing.utils import *
 import pandas as pd
@@ -48,7 +48,7 @@ def process_single_image(filename, segm_alg, debug=False):
     img             numpy arrray containing the image
 
     """
-    img = cv.imread(filename)
+    img = cv2.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
     if(segm_alg=="ws"):
         img_superpixel = segment_superpixel(img, debug)
@@ -57,6 +57,27 @@ def process_single_image(filename, segm_alg, debug=False):
         roi = segment_with_level_sets(img_wo_hair)
     features = __process_features(img_wo_hair, roi)
     return [roi, features, img_wo_hair]
+
+def process_single_image_no_segm(filename, debug=False):
+    """
+    Process a single image extracting the ROIS and the features
+    Parameters
+    ----------
+    path            path where all the dataset is licated
+    filename        file to extract the ROIS
+
+    Returns
+    -------
+    all_scales      Segmentation ROIs of the image
+    features        dataframe of all the features of the ROIs in the image
+    img             numpy arrray containing the image
+
+    """
+    img = cv2.imread(filename)
+    img_wo_hair, _ = preprocess_and_remove_hair(img)
+    roi = img_wo_hair
+    features = extract_features_no_segm(img_wo_hair)
+    return [roi, pd.DataFrame(features).transpose(), img_wo_hair]
 
 
 def extract_ROI(roi_contour, img,padding = 0.05):

@@ -228,7 +228,6 @@ def get_color_based_features(roi_color, mask):
     return np.concatenate((np.array([num_colors, concentricity]), means_and_stds.reshape(means_and_stds.shape[1],)))
 
 
-
 def get_texture_features(roi_gray, mask):
     """
     Extract texture features from ROI
@@ -283,6 +282,24 @@ def get_texture_features(roi_gray, mask):
 
     return texture_features
 
+def get_texture_features_no_segm(roi_gray):
+    """
+    Extract texture features from ROI
+
+    Parameters
+    ----------
+    roi_gray            Region of interest of the image (gray scale)
+    mask                Binary version of the ROI
+
+    Returns
+    -------
+    texture_features    All extracted texture features of a ROI
+    """
+    
+    textures = mt.features.haralick(roi_gray, ignore_zeros=False)
+    haralick_features = textures.mean(axis=0)
+
+    return haralick_features
 
 def get_texture_geometrical_and_asymetry_features(roi_gray, cnt, mask):
 
@@ -511,3 +528,41 @@ def extract_features(roi_color, contour, mask):
     hog_features = features_hog (roi_gray)
 
     return np.transpose(np.concatenate((geom_features, texture_features, color_features, hu_moments, lbp, hog_features), axis=0))
+
+
+def extract_features_no_segm(roi_color):
+    """
+    Extract all the features of a ROI. A total of 41 features are extracted. LBP and HoG are not activated
+
+    Parameters
+    ----------
+    roi_color           Region of interest of the image (RGB)
+    contour             Contour containing the ROI
+    mask                Binary version of the ROI
+
+    Returns
+    -------
+    feature_vector      All extracted features of a ROI
+    """
+
+
+    roi_gray = cv.cvtColor(roi_color, cv.COLOR_BGR2GRAY)
+
+    #Create fake mask
+    mask = 255*np.ones_like(roi_gray, dtype = np.uint8)
+    mask[0,0] = 0
+    mask[-1,0] = 0
+
+    # Color based features
+    color_features = get_color_based_features(roi_color, mask)
+
+    # LBP
+    lbp = multi_scale_lbp_features(roi_gray)
+
+    # Texture
+    texture_features = get_texture_features_no_segm(roi_gray)
+
+    # HOG features
+    hog_features = features_hog(roi_gray)
+
+    return np.transpose(np.concatenate((texture_features, color_features, lbp, hog_features), axis=0))
