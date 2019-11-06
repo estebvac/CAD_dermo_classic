@@ -1,6 +1,6 @@
 import cv2
 from segmentation.segmentation import *
-from feature_extraction.feature_extraction import extract_features_no_segm
+from feature_extraction.feature_extraction import extract_features_no_segm, extract_features
 from preprocessing.preprocessing import *
 from preprocessing.utils import *
 import pandas as pd
@@ -27,10 +27,9 @@ def __process_features(img, roi):
         if roi_counter == 0:
             features_all = features
         else:
-            np.concatenate((features_all, features), axis=0)
+            features_all = np.concatenate((features_all, features), axis=0)
 
-    dataframe = pd.DataFrame(features_all)
-    return dataframe.transpose()
+    return features_all
 
 
 def process_single_image(filename, segm_alg, debug=False):
@@ -50,15 +49,16 @@ def process_single_image(filename, segm_alg, debug=False):
     """
     img = cv2.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
-    if(segm_alg=="ws"):
+    if segm_alg == "ws":
         img_superpixel = segment_superpixel(img, debug)
         roi = segment_image(img_wo_hair, img_superpixel, debug)
-    elif(segm_alg=="ls"):
+    elif segm_alg == "ls":
         roi = segment_with_level_sets(img_wo_hair)
     features = __process_features(img_wo_hair, roi)
-    return [roi, features, img_wo_hair]
+    return features
 
-def process_single_image_no_segm(filename, debug=False):
+
+def process_single_image_no_segm(filename):
     """
     Process a single image extracting the ROIS and the features
     Parameters
@@ -75,12 +75,11 @@ def process_single_image_no_segm(filename, debug=False):
     """
     img = cv2.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
-    roi = img_wo_hair
     features = extract_features_no_segm(img_wo_hair)
-    return [roi, pd.DataFrame(features).transpose(), img_wo_hair]
+    return features
 
 
-def extract_ROI(roi_contour, img,padding = 0.05):
+def extract_ROI(roi_contour, img, padding=0.05):
     """
 
     Parameters
@@ -136,5 +135,5 @@ def save_mask(roi, path, filename):
     directory = [path, 'mask'] + directory
     seperator = '/'
     write_path = seperator.join(directory).replace('\\', '/')
-    cv2.imwrite(write_path, roi*255)
+    cv2.imwrite(write_path, roi * 255)
     cv2.waitKey(1)

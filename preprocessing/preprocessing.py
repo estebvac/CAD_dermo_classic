@@ -157,6 +157,7 @@ def preprocess_and_remove_hair(img):
             binarized = cv.adaptiveThreshold(bring_to_256_levels(temp), 255, cv.ADAPTIVE_THRESH_MEAN_C,
                                              cv.THRESH_BINARY, 21, -10)
             corrected = only_hair(binarized)
+            corrected = remove_not_matching(dilated, corrected)
             total2 = cv.bitwise_or(total2, applyCriteria(dilated.astype(np.uint8), corrected, connectivity))
 
     # Refinement
@@ -218,3 +219,14 @@ def remove_black_frame(img):
     # Apply inpainting
     inpainted = cv.inpaint(img, borders_to_remove, 15, cv.INPAINT_TELEA)
     return inpainted
+
+
+def remove_not_matching(base, to_check):
+    _, labels = cv.connectedComponents(to_check)
+    matches = labels * base / 255
+    non_zero = matches[matches != 0]
+    result = np.zeros_like(to_check)
+    for i in np.unique(non_zero):
+        result[labels == i] = 255
+
+    return result

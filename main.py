@@ -1,9 +1,8 @@
-from feature_extraction.training_data import prepate_datasets_no_segm
+from feature_extraction.training_data import *
 
-path_train = r"C:\MyData\MAIA\Semester3\CAD\Projects\Dermo\Data\train"
-path_val = r"C:\MyData\MAIA\Semester3\CAD\Projects\Dermo\Data\val"
+path_train = r"C:\Users\esteb\Documents\CAD_PROJECT\DERMO\train"
+path_val = r"C:\Users\esteb\Documents\CAD_PROJECT\DERMO\val"
 
-segmentation_alg = "ws" #"ws"
+segmentation_alg = "ws"  # "ws, ls  or None"
 
-prepate_datasets_no_segm(path_train, "train_no_segm.csv")
-#prepate_datasets(path_val, "val_no_segm.csv", segm_alg = segmentation_alg)
+prepare_dataset(path_train, "train_no_segm", segm_alg= None)
