@@ -34,6 +34,17 @@ def get_elongation(m):
 
 
 def get_num_colors(centers):
+    """
+    Function to find the number of colors based on a previous clustering of intensities in CIElab color space. 4 centers are received
+
+    Parameters
+    ----------
+    centers             Numpy array with centers of clusters of intensities 
+
+    Returns
+    -------
+    number of colors    Number of colors by approximation depending on the maximum distance between clusters
+    """
     # Centers have two components -> Euclidean distance must be computed
     distances = np.zeros((1, 12))
     ii = 0
@@ -49,6 +60,19 @@ def get_num_colors(centers):
 
 
 def get_full_convex_hull(contours, the_image):
+    """
+    Function to find the convex hull for several regions
+
+    Parameters
+    ----------
+    contours           Contours in the image
+    the_image          Image to draw the contours in 
+
+    Returns
+    -------
+    the_image           Image with drawn convex hull
+    area                Area of the hull
+    """
     if (len(contours) == 0):
         return the_image, 0
     # cont = np.vstack(contours[i] for i in range(len(contours)))
@@ -62,6 +86,17 @@ def get_full_convex_hull(contours, the_image):
 
 
 def get_largest_cohesive_area(binary):
+    """
+    Function for computing largest cohesive area from binary image
+
+    Parameters
+    ----------
+    binary            Binary image whose areas should be analyzed
+
+    Returns
+    -------
+    biggest_area      Maximum cohesive area
+    """
     output_image = np.zeros_like(binary)
     nlabels, labels, stats, centroids = cv.connectedComponentsWithStats(binary, 8)
     sorted_area_idx = np.argsort(stats[:, 4])
@@ -112,6 +147,18 @@ def get_geometrical_features(contour):
 
 
 def get_color_based_features(roi_color, mask):
+    """
+    Extract color features from the object. A total of 38 features are extracted, including statistics in 5 color spaces
+
+    Parameters
+    ----------
+    roi_color           Region of interest of the image (RGB)
+    mask                Binary version of the ROI
+
+    Returns
+    -------
+    color features      All extracted color features of a ROI
+    """
     if (np.max(mask) > 1):  # Normalize if mask is not 0 or 1
         mask = mask / 255
         mask = mask.astype(np.uint8)
@@ -308,106 +355,6 @@ def get_texture_features_no_segm(roi_gray):
     return haralick_features
 
 
-def get_texture_geometrical_and_asymetry_features(roi_gray, cnt, mask):
-    # First, extract features for asymmetry
-    num_rows = mask.shape[0]
-    num_cols = mask.shape[1]
-    total_area = len(mask[mask > 0])
-    center_row = int(np.floor(num_rows / 2))
-    center_col = int(np.floor(num_cols / 2))
-
-    if (len(cnt) < 5):  # If less than 5 points in contour, generate a contour with 8 points (rectangle)
-        cnt = np.array([[center_row - np.floor(center_row / 2), center_col - np.floor(center_col / 2)], \
-                        [center_row - np.floor(center_row / 2), center_col], \
-                        [center_row - np.floor(center_row / 2), center_col + np.floor(center_col / 2)], \
-                        [center_row, center_col + np.floor(center_col / 2)], \
-                        [center_row + np.floor(center_row / 2), center_col + np.floor(center_col / 2)], \
-                        [center_row + np.floor(center_row / 2), center_col], \
-                        [center_row + np.floor(center_row / 2), center_col - np.floor(center_col / 2)],
-                        [center_row, center_col - np.floor(center_col / 2)]], dtype=np.int32)
-        cnt = cnt[:, np.newaxis, :]  # Add new axis so that it's similar to normal contours
-    geom_features = get_geometrical_features(cnt)
-    texture_features = get_texture_features(roi_gray, mask)
-
-    try:
-        (x, y), (MA, ma), angle = cv.fitEllipse(cnt)
-    except:  # If some error makes cnt to have too few points
-        x = center_col
-        y = center_row
-        angle = 90
-    x_int = int(np.floor(x))
-    y_int = int(np.floor(y))
-    mMA = np.tan(-angle * (np.pi) / 180)
-    mma = np.tan(-angle * (np.pi) / 180 - np.pi / 2)
-    output_images = [mask.copy() for i in range(8)]  # 8 images to be generated
-    for i in range(mask.shape[0]):
-        for j in range(mask.shape[1]):
-            if (mMA * (i - y) + x > j):
-                output_images[0][i, j] = 0
-                output_images[4][i, j] = 0
-                output_images[6][i, j] = 0
-            else:
-                output_images[1][i, j] = 0
-                output_images[5][i, j] = 0
-                output_images[7][i, j] = 0
-            if (mma * (i - y) + x > j):
-                output_images[2][i, j] = 0
-                output_images[4][i, j] = 0
-                output_images[7][i, j] = 0
-            else:
-                output_images[3][i, j] = 0
-                output_images[5][i, j] = 0
-                output_images[6][i, j] = 0
-
-    texture_features_partial_area = np.zeros((len(texture_features), 8))
-    geom_features_partial_area = np.zeros((len(geom_features), 8))
-
-    try:
-        for i in range(8):
-            _, curr_cnt, _ = cv.findContours(output_images[i].astype(np.uint8), cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
-            texture_features_partial_area[:, i] = get_texture_features(roi_gray, output_images[i]) / texture_features
-            geom_features_partial_area[:, i] = get_geometrical_features(curr_cnt[0]) / geom_features
-    except:  # If something goes wrong with the generation of the images, just multiply original ones by angle in rads
-        for i in range(8):
-            texture_features_partial_area[:, i] = texture_features * angle * (np.pi) / 180
-            geom_features_partial_area[:, i] = geom_features * angle * (np.pi) / 180
-
-    # Now extract asymmetry index (Stoecker)
-    T = np.float32([[1, 0, center_col - y_int], [0, 1, center_row - x_int]])
-    translated = cv.warpAffine(mask.copy(), T, (mask.shape[1], mask.shape[0]))
-    rotated = imutils.rotate(translated, angle + 90)
-    upper = rotated[:center_row, :]
-    bottom = rotated[center_row:, :]
-    left = rotated[:, :center_col]
-    right = rotated[:, center_col:]
-    flipped_updown = cv.flip(upper, 0)
-    flipped_lr = cv.flip(left, 1)
-    # solve differences in size
-    if (bottom.shape == flipped_updown.shape):
-        diff_vert = bottom - flipped_updown
-    else:
-        if (bottom.shape[0] > flipped_updown.shape[0]):  # If upper has more rows
-            diff_vert = bottom[:flipped_updown.shape[0], :] - flipped_updown
-        else:
-            diff_vert = bottom - flipped_updown[:bottom.shape[0], :]
-    if (right.shape == flipped_lr.shape):
-        diff_hor = right - flipped_lr
-    else:
-        if (right.shape[1] > flipped_lr.shape[1]):
-            diff_hor = right[:, :flipped_lr.shape[1]] - flipped_lr
-        else:
-            diff_hor = right - flipped_lr[:, :right.shape[1]]
-    area_diff_vert = len(diff_vert[diff_vert > 0])
-    area_diff_hor = len(diff_hor[diff_hor > 0])
-    if (area_diff_hor > area_diff_vert):
-        asymmetry_index = area_diff_vert / total_area
-    else:
-        asymmetry_index = area_diff_hor / total_area
-
-    return np.concatenate((np.array([asymmetry_index]), texture_features, geom_features,
-                           texture_features_partial_area.flatten(), geom_features_partial_area.flatten()))
-
-
 def feature_hu_moments(contour):
     """
     Calculate the shape features based on HU moments
@@ -531,22 +478,17 @@ def extract_features(roi_color, contour, mask):
     # Texture
     texture_features = get_texture_features(roi_gray, mask)
 
-    # HOG features
-    hog_features = features_hog(roi_gray)
-
     return np.transpose(
-        np.concatenate((geom_features, texture_features, color_features, hu_moments, lbp, hog_features), axis=0))
+        np.concatenate((geom_features, texture_features, color_features, hu_moments, lbp), axis=0))
 
 
 def extract_features_no_segm(roi_color):
     """
-    Extract all the features of a ROI. A total of 41 features are extracted. LBP and HoG are not activated
+    Extract all the features of a ROI for the case in which there is no segmentation. 
 
     Parameters
     ----------
     roi_color           Region of interest of the image (RGB)
-    contour             Contour containing the ROI
-    mask                Binary version of the ROI
 
     Returns
     -------

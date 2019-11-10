@@ -66,4 +66,4 @@ def prepare_dataset(dataset_path, output_name, segm_alg=None, debug=False):
     meta_data.to_csv(join(dataset_path, output_name + ".csv"))
     numpy_path = join(dataset_path, output_name + ".npy")
     np.save(numpy_path, total_features)
-    # return training_features
+    return total_features

@@ -8,15 +8,15 @@ import pandas as pd
 
 def __process_features(img, roi):
     """
-    Process the resulting scales of the segmentation
+    Obtain features for all segmented regions in the image
     Parameters
     ----------
     img             numpy array containing the image
-    all_scales      numpy array containing all the segmented ROIS in all scales
+    roi             Roi in the image
 
     Returns
     -------
-    dataframe       dataframe of all the ROIs in the image
+    features_all    Array with all features for all regions in current image
 
     """
     _, contours, _ = cv2.findContours(255 * roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -60,17 +60,14 @@ def process_single_image(filename, segm_alg, debug=False):
 
 def process_single_image_no_segm(filename):
     """
-    Process a single image extracting the ROIS and the features
+    Process a single image (without segmentation) extracting the ROIS and the features
     Parameters
     ----------
-    path            path where all the dataset is licated
     filename        file to extract the ROIS
 
     Returns
     -------
-    all_scales      Segmentation ROIs of the image
     features        dataframe of all the features of the ROIs in the image
-    img             numpy arrray containing the image
 
     """
     img = cv2.imread(filename)

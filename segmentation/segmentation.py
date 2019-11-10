@@ -13,13 +13,17 @@ from skimage.segmentation import (morphological_chan_vese,
 
 def segment_image(img_orig, img_subpixel, debug=False):
     """
+    Function to segment input image using information from previous superpixel segmentation
 
     Parameters
     ----------
-    img_subpixel
+    img_orig            Original image to segment
+
+    img_subpixel        Result of superpixels
 
     Returns
-    -------
+    ----------
+    roi                 Result of the segmentation
 
     """
     img_color = img_subpixel
@@ -48,7 +52,20 @@ def segment_image(img_orig, img_subpixel, debug=False):
 
 
 def create_marker(img, debug=False):
+    """
+    Function to create markers on the image that will be used then by the Watershed algorithm
 
+    Parameters
+    ----------
+    img                 Input image
+
+    Returns
+    ----------
+    markers             Created markers
+    sure_fg_val         Points corresponding to foreground
+    sure_bg_val         Points corresponding to background
+
+    """
     # Convert to gray
     img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
@@ -100,7 +117,7 @@ def create_marker(img, debug=False):
 
 def imshow_contour(img_color, thresh, window_name="Contours"):
     """
-
+    Function to show contours of an image 
     Parameters
     ----------
     img_color       Color image
@@ -133,7 +150,7 @@ def mask_eliptical(img, border=-1, positive=True):
 
     Returns
     -------
-
+    Ellipsed image
     """
     if positive:
         ellipse_mask = np.zeros((img.shape[0], img.shape[1]))
@@ -159,7 +176,18 @@ def mask_eliptical(img, border=-1, positive=True):
 
 
 def segment_superpixel(img, debug=False):
+    """
+    Function to apply superpixels to image
 
+    Parameters
+    ----------
+    img           Original image to segment
+
+    Returns
+    ----------
+    img_labeled   Labeled image
+
+    """
     img_color = img
     mask = mask_eliptical(img_color, -1, True)
     segments_slic = slic(img_color, n_segments=400, compactness=10, sigma=1)

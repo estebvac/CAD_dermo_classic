@@ -1,8 +1,3 @@
-"""
-Created on Sat Oct  5 17:04:04 2019
-
-@author: Sergio814
-"""
 
 import numpy as np
 import cv2 as cv
@@ -102,7 +97,7 @@ def applyCriteria(base_image, to_check, connectivity):
 
 
 def preprocess_and_remove_hair(img):
-    """Function normalize image to 0-255 range (8 bits)
+    """Function to apply median filter and remove hair from image using inpainting
 
     Parameters
     ----------
@@ -113,6 +108,8 @@ def preprocess_and_remove_hair(img):
     -------
     inpainted : numpy array
         Gray scale image with removed hairs and median-filtered. 
+    binary : numpy array
+        Inpainting mask
     """
     # Apply median filter
     img_after_median = cv.medianBlur(img, 5)
@@ -120,17 +117,11 @@ def preprocess_and_remove_hair(img):
     # Convert to gray
     img_gray = cv.cvtColor(img_after_median, cv.COLOR_BGR2GRAY)
 
-    # Add artificial hair
+    # Add artificial hair -> To avoid or skip step of checking whether or not there is hair in the image 
     img_gray[:70, 480:483] = max(np.min(img_gray) + 30, 0)
 
     # Apply bottom hat operation
     bottom_hatted1 = cv.morphologyEx(img_gray, cv.MORPH_BLACKHAT, cv.getStructuringElement(cv.MORPH_ELLIPSE, (7, 7)))
-
-    # TODO: Check whether there is hair or not. Temporary solution: hair added to all images
-    # first_se_length = 30
-    # for i in range(12):
-    #    opened = cv.morphologyEx(bottom_hatted1, cv.MORPH_OPEN, getLinearSE(first_se_length, i+1))
-    # Intermediate step: opening on bottom hatted image with linear SE
 
     total1 = np.zeros_like(bottom_hatted1)
     se_lengths1 = [3]
@@ -174,6 +165,7 @@ def preprocess_and_remove_hair(img):
 
 def remove_black_frame(img):
     """
+    Function to remove black frame from images
 
     Parameters
     ----------
@@ -181,7 +173,7 @@ def remove_black_frame(img):
 
     Returns
     -------
-
+    inpainted   Image without black frame
     """
     # Convert to gray
     img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
@@ -222,6 +214,18 @@ def remove_black_frame(img):
 
 
 def remove_not_matching(base, to_check):
+    """
+    Function to remove non matching connected components
+    
+    Parameters
+    ----------
+    base         Base image
+    to_check     Image whose components need to be analyzed
+
+    Returns
+    -------
+    result      Image for which non matching components have been removed
+    """
     _, labels = cv.connectedComponents(to_check)
     matches = labels * base / 255
     non_zero = matches[matches != 0]
