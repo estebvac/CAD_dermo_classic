@@ -50,7 +50,7 @@ def process_single_image(filename, segm_alg, debug=False):
     img = cv2.imread(filename)
     img_wo_hair, _ = preprocess_and_remove_hair(img)
     if segm_alg == "ws":
-        img_superpixel = segment_superpixel(img, debug)
+        img_superpixel = segment_superpixel(img_wo_hair, debug)
         roi = segment_image(img_wo_hair, img_superpixel, debug)
     elif segm_alg == "ls":
         roi = segment_with_level_sets(img_wo_hair)

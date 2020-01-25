@@ -2,6 +2,7 @@
 from preprocessing.utils import *
 import matplotlib.pyplot as plt
 from preprocessing.preprocessing import discard_small
+from preprocessing.utils import show_image
 from skimage.segmentation import slic
 from skimage import color
 from skimage.filters.thresholding import threshold_otsu
@@ -44,9 +45,9 @@ def segment_image(img_orig, img_subpixel, debug=False):
 
     # print the segmentation
     if debug:
-        plt.imshow(img_orig)
-        plt.contour(roi)
-        plt.show()
+        show_image(roi * 255,"Final segmentation")
+        cv.waitKey(10)
+
 
     return roi
 
@@ -109,8 +110,9 @@ def create_marker(img, debug=False):
 
     markers_out = extreme_borders + sure_fg
     if debug:
-        plt.imshow(markers_out)
-        plt.show()
+        show_image(markers_out, "markers")
+        cv.waitKey(10)
+
 
     return [markers_out, sure_fg_val, sure_bg_val]
 

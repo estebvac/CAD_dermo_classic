@@ -20,7 +20,7 @@ path_test = r"C:\MyData\MAIA\Semester3\CAD\Projects\Dermo\Data\test"
 
 segmentation_alg = "ws"  # "ws, ls  or None"
 
-prepare_dataset(path_train, "train_segm", segm_alg= "ws")
+prepare_dataset(path_train, "train_segm", segm_alg= "ws", debug=False)
 prepare_dataset(path_val, "val_segm", segm_alg= "ws")
 
 #For generating features without segmentation, please uncomment following lines
